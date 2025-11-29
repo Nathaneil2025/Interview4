@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 app = FastAPI(
     title="Interview4 App",
     description="DevOps Pipeline Demo Application",
-    version="1.0.0"
+    version="1.0.1"
 )
 
 
