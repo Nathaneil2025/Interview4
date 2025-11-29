@@ -76,12 +76,30 @@ pipeline {
                             # Pull latest image
                             docker pull ${ECR_URL}/${ECR_REPO}:latest
                             
-                            # Stop old container
-                            docker stop interview4-app || true
-                            docker rm interview4-app || true
+                            # Start GREEN container on port 8081
+                            docker run -d --name interview4-app-green -p 8081:8000 ${ECR_URL}/${ECR_REPO}:latest
                             
-                            # Run new container
-                            docker run -d --name interview4-app -p 8080:8000 ${ECR_URL}/${ECR_REPO}:latest
+                            # Health check GREEN
+                            sleep 5
+                            if curl -f http://localhost:8081/health; then
+                                echo "GREEN is healthy, switching traffic..."
+                                
+                                # Stop BLUE (old container)
+                                docker stop interview4-app || true
+                                docker rm interview4-app || true
+                                
+                                # Stop GREEN and restart on production port
+                                docker stop interview4-app-green
+                                docker rm interview4-app-green
+                                docker run -d --name interview4-app -p 8080:8000 ${ECR_URL}/${ECR_REPO}:latest
+                                
+                                echo "Deployment successful - switched to new version"
+                            else
+                                echo "GREEN health check failed, rolling back..."
+                                docker stop interview4-app-green || true
+                                docker rm interview4-app-green || true
+                                exit 1
+                            fi
                         '
                     """
                 }
